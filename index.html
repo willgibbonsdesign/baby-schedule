@@ -1,0 +1,365 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Baby Schedule</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Arial, sans-serif;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            overflow: hidden;
+        }
+        
+        .header {
+            background: #4472C4;
+            color: white;
+            padding: 20px;
+            text-align: center;
+        }
+        
+        .current-time {
+            font-size: 24px;
+            font-weight: bold;
+            margin-bottom: 5px;
+        }
+        
+        .current-date {
+            font-size: 14px;
+            opacity: 0.9;
+        }
+        
+        .schedule-container {
+            position: relative;
+            padding: 20px;
+        }
+        
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            position: relative;
+        }
+        
+        th {
+            background: #4472C4;
+            color: white;
+            padding: 12px;
+            text-align: center;
+            font-weight: bold;
+            border: 1px solid #ddd;
+        }
+        
+        td {
+            padding: 12px;
+            text-align: center;
+            border: 1px solid #ddd;
+            font-weight: bold;
+            position: relative;
+        }
+        
+        .time-col {
+            font-weight: normal;
+            background: #f9f9f9;
+        }
+        
+        .sleep { background: #B4C7E7; }
+        .baby { background: #FFD966; }
+        .work { background: #A9D08E; }
+        .home { background: #F4B084; }
+        .personal { background: #E7E6E6; }
+        
+        .current-row {
+            box-shadow: 0 0 0 3px #FF6B6B inset;
+            animation: pulse 2s infinite;
+        }
+        
+        @keyframes pulse {
+            0%, 100% { box-shadow: 0 0 0 3px #FF6B6B inset; }
+            50% { box-shadow: 0 0 0 3px #FF3333 inset; }
+        }
+        
+        .time-indicator {
+            position: absolute;
+            left: 0;
+            right: 0;
+            height: 3px;
+            background: #FF6B6B;
+            z-index: 100;
+            box-shadow: 0 0 8px rgba(255, 107, 107, 0.6);
+            transition: top 0.3s ease;
+        }
+        
+        .time-indicator::before {
+            content: '';
+            position: absolute;
+            left: 0;
+            top: -4px;
+            width: 0;
+            height: 0;
+            border-left: 6px solid transparent;
+            border-right: 6px solid transparent;
+            border-top: 8px solid #FF6B6B;
+        }
+        
+        .legend {
+            padding: 20px;
+            background: #f9f9f9;
+            border-top: 2px solid #ddd;
+        }
+        
+        .legend-title {
+            font-weight: bold;
+            margin-bottom: 10px;
+            font-size: 14px;
+        }
+        
+        .legend-items {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 10px;
+        }
+        
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-size: 13px;
+        }
+        
+        .legend-color {
+            width: 30px;
+            height: 20px;
+            border-radius: 3px;
+            border: 1px solid #ddd;
+        }
+        
+        .notes {
+            padding: 20px;
+            background: #fff;
+            border-top: 1px solid #ddd;
+            font-size: 13px;
+            line-height: 1.6;
+        }
+        
+        .notes-title {
+            font-weight: bold;
+            margin-bottom: 10px;
+        }
+        
+        .notes ul {
+            list-style: none;
+            padding-left: 0;
+        }
+        
+        .notes li {
+            padding: 5px 0;
+        }
+        
+        .notes li::before {
+            content: "• ";
+            color: #4472C4;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <div class="current-time" id="currentTime">--:--:-- --</div>
+            <div class="current-date" id="currentDate">Loading...</div>
+        </div>
+        
+        <div class="schedule-container">
+            <div class="time-indicator" id="timeIndicator"></div>
+            <table id="scheduleTable">
+                <thead>
+                    <tr>
+                        <th style="width: 30%">Time</th>
+                        <th style="width: 35%">Person A</th>
+                        <th style="width: 35%">Person B</th>
+                    </tr>
+                </thead>
+                <tbody id="scheduleBody">
+                </tbody>
+            </table>
+        </div>
+        
+        <div class="legend">
+            <div class="legend-title">LEGEND</div>
+            <div class="legend-items">
+                <div class="legend-item">
+                    <div class="legend-color sleep"></div>
+                    <span>SLEEP - Sleeping (Night Shift)</span>
+                </div>
+                <div class="legend-item">
+                    <div class="legend-color baby"></div>
+                    <span>Baby Shift - Taking care of baby</span>
+                </div>
+                <div class="legend-item">
+                    <div class="legend-color work"></div>
+                    <span>Work Shift - Working/studying</span>
+                </div>
+                <div class="legend-item">
+                    <div class="legend-color home"></div>
+                    <span>Home Shift - Meals, chores, cleanup</span>
+                </div>
+                <div class="legend-item">
+                    <div class="legend-color personal"></div>
+                    <span>Personal - Shower, dog walks, etc.</span>
+                </div>
+            </div>
+        </div>
+        
+        <div class="notes">
+            <div class="notes-title">NOTES</div>
+            <ul>
+                <li>Someone is ALWAYS on baby duty</li>
+                <li>Person finishing 2nd night shift (4am-9am) gets immediate recovery time</li>
+                <li>Swap who is Person A vs Person B each day/week to keep fair</li>
+                <li>Dog walks happen during Personal time slots (9-10am & 6-7pm)</li>
+                <li>Red line shows current time</li>
+            </ul>
+        </div>
+    </div>
+    
+    <script>
+        const schedule = [
+            { start: "9:00 AM", end: "10:25 AM", personA: "Baby Shift", personB: "Personal" },
+            { start: "10:25 AM", end: "12:25 PM", personA: "Baby Shift", personB: "Work Shift" },
+            { start: "12:25 PM", end: "2:25 PM", personA: "Work Shift", personB: "Baby Shift" },
+            { start: "2:25 PM", end: "4:25 PM", personA: "Baby Shift", personB: "Work Shift" },
+            { start: "4:25 PM", end: "6:25 PM", personA: "Work Shift", personB: "Baby Shift" },
+            { start: "6:25 PM", end: "7:25 PM", personA: "Baby Shift", personB: "Personal" },
+            { start: "7:25 PM", end: "8:25 PM", personA: "Home Shift", personB: "Baby Shift" },
+            { start: "8:25 PM", end: "10:00 PM", personA: "Baby Shift", personB: "Home Shift" },
+            { start: "10:00 PM", end: "4:00 AM", personA: "SLEEP", personB: "Baby Shift" },
+            { start: "4:00 AM", end: "9:00 AM", personA: "Baby Shift", personB: "SLEEP" }
+        ];
+        
+        function timeToMinutes(timeStr) {
+            const [time, period] = timeStr.split(' ');
+            let [hours, minutes] = time.split(':').map(Number);
+            
+            if (period === 'PM' && hours !== 12) hours += 12;
+            if (period === 'AM' && hours === 12) hours = 0;
+            
+            return hours * 60 + minutes;
+        }
+        
+        function getShiftClass(shift) {
+            if (shift === 'SLEEP') return 'sleep';
+            if (shift === 'Baby Shift') return 'baby';
+            if (shift === 'Work Shift') return 'work';
+            if (shift === 'Home Shift') return 'home';
+            if (shift === 'Personal') return 'personal';
+            return '';
+        }
+        
+        function buildSchedule() {
+            const tbody = document.getElementById('scheduleBody');
+            schedule.forEach((slot, index) => {
+                const row = document.createElement('tr');
+                row.dataset.index = index;
+                row.innerHTML = `
+                    <td class="time-col">${slot.start} - ${slot.end}</td>
+                    <td class="${getShiftClass(slot.personA)}">${slot.personA}</td>
+                    <td class="${getShiftClass(slot.personB)}">${slot.personB}</td>
+                `;
+                tbody.appendChild(row);
+            });
+        }
+        
+        function updateTime() {
+            const now = new Date();
+            
+            const timeStr = now.toLocaleTimeString('en-US', { 
+                timeZone: 'America/Denver',
+                hour: 'numeric',
+                minute: '2-digit',
+                second: '2-digit',
+                hour12: true
+            });
+            
+            const dateStr = now.toLocaleDateString('en-US', {
+                timeZone: 'America/Denver',
+                weekday: 'long',
+                year: 'numeric',
+                month: 'long',
+                day: 'numeric'
+            });
+            
+            document.getElementById('currentTime').textContent = timeStr;
+            document.getElementById('currentDate').textContent = dateStr;
+            
+            const currentMinutes = now.getHours() * 60 + now.getMinutes();
+            
+            let currentSlotIndex = -1;
+            let progressInSlot = 0;
+            
+            for (let i = 0; i < schedule.length; i++) {
+                let startMinutes = timeToMinutes(schedule[i].start);
+                let endMinutes = timeToMinutes(schedule[i].end);
+                
+                if (endMinutes < startMinutes) {
+                    if (currentMinutes >= startMinutes || currentMinutes < endMinutes) {
+                        currentSlotIndex = i;
+                        if (currentMinutes >= startMinutes) {
+                            progressInSlot = (currentMinutes - startMinutes) / ((1440 - startMinutes) + endMinutes);
+                        } else {
+                            progressInSlot = ((1440 - startMinutes) + currentMinutes) / ((1440 - startMinutes) + endMinutes);
+                        }
+                        break;
+                    }
+                } else {
+                    if (currentMinutes >= startMinutes && currentMinutes < endMinutes) {
+                        currentSlotIndex = i;
+                        progressInSlot = (currentMinutes - startMinutes) / (endMinutes - startMinutes);
+                        break;
+                    }
+                }
+            }
+            
+            const rows = document.querySelectorAll('#scheduleBody tr');
+            rows.forEach((row, index) => {
+                if (index === currentSlotIndex) {
+                    row.classList.add('current-row');
+                } else {
+                    row.classList.remove('current-row');
+                }
+            });
+            
+            if (currentSlotIndex >= 0) {
+                const currentRow = rows[currentSlotIndex];
+                const rowTop = currentRow.offsetTop;
+                const rowHeight = currentRow.offsetHeight;
+                const indicatorTop = rowTop + (rowHeight * progressInSlot);
+                
+                const indicator = document.getElementById('timeIndicator');
+                indicator.style.top = indicatorTop + 'px';
+                indicator.style.display = 'block';
+            } else {
+                document.getElementById('timeIndicator').style.display = 'none';
+            }
+        }
+        
+        buildSchedule();
+        updateTime();
+        setInterval(updateTime, 1000);
+    </script>
+</body>
+</html>
