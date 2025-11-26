@@ -44,6 +44,15 @@
             opacity: 0.9;
         }
         
+        .rotation-indicator {
+            margin-top: 10px;
+            padding: 8px 15px;
+            background: rgba(255,255,255,0.2);
+            border-radius: 5px;
+            font-size: 13px;
+            display: inline-block;
+        }
+        
         .schedule-container {
             position: relative;
             padding: 20px;
@@ -182,6 +191,7 @@
         <div class="header">
             <div class="current-time" id="currentTime">--:--:-- --</div>
             <div class="current-date" id="currentDate">Loading...</div>
+            <div class="rotation-indicator" id="rotationIndicator">Loading rotation...</div>
         </div>
         
         <div class="schedule-container">
@@ -190,8 +200,8 @@
                 <thead>
                     <tr>
                         <th style="width: 30%">Time</th>
-                        <th style="width: 35%">Person A</th>
-                        <th style="width: 35%">Person B</th>
+                        <th style="width: 35%" id="personAHeader">Person A</th>
+                        <th style="width: 35%" id="personBHeader">Person B</th>
                     </tr>
                 </thead>
                 <tbody id="scheduleBody">
@@ -230,7 +240,7 @@
             <ul>
                 <li>Someone is ALWAYS on baby duty</li>
                 <li>Person finishing 2nd night shift (4am-9am) gets immediate recovery time</li>
-                <li>Swap who is Person A vs Person B each day/week to keep fair</li>
+                <li>Names automatically swap each day (even days: Julie=A, odd days: Will=A)</li>
                 <li>Dog walks happen during Personal time slots (9-10am & 6-7pm)</li>
                 <li>Red line shows current time</li>
             </ul>
@@ -270,8 +280,37 @@
             return '';
         }
         
+        function getNames() {
+            const now = new Date();
+            const denverDate = new Date(now.toLocaleString('en-US', { timeZone: 'America/Denver' }));
+            const dayOfMonth = denverDate.getDate();
+            const isEvenDay = dayOfMonth % 2 === 0;
+            
+            if (isEvenDay) {
+                return { personA: 'Julie', personB: 'Will' };
+            } else {
+                return { personA: 'Will', personB: 'Julie' };
+            }
+        }
+        
         function buildSchedule() {
+            const names = getNames();
             const tbody = document.getElementById('scheduleBody');
+            tbody.innerHTML = ''; // Clear existing rows
+            
+            // Update headers
+            document.getElementById('personAHeader').textContent = names.personA;
+            document.getElementById('personBHeader').textContent = names.personB;
+            
+            // Update rotation indicator
+            const now = new Date();
+            const denverDate = new Date(now.toLocaleString('en-US', { timeZone: 'America/Denver' }));
+            const dayOfMonth = denverDate.getDate();
+            const isEvenDay = dayOfMonth % 2 === 0;
+            const tomorrowWillBe = isEvenDay ? 'Will' : 'Julie';
+            document.getElementById('rotationIndicator').textContent = 
+                `Tomorrow (day ${dayOfMonth + 1}): ${tomorrowWillBe} will be Person A`;
+            
             schedule.forEach((slot, index) => {
                 const row = document.createElement('tr');
                 row.dataset.index = index;
@@ -357,9 +396,25 @@
             }
         }
         
+        // Check if we need to rebuild schedule at midnight
+        let lastDayChecked = new Date().getDate();
+        function checkForDayChange() {
+            const now = new Date();
+            const denverDate = new Date(now.toLocaleString('en-US', { timeZone: 'America/Denver' }));
+            const currentDay = denverDate.getDate();
+            
+            if (currentDay !== lastDayChecked) {
+                lastDayChecked = currentDay;
+                buildSchedule();
+            }
+        }
+        
         buildSchedule();
         updateTime();
-        setInterval(updateTime, 1000);
+        setInterval(() => {
+            updateTime();
+            checkForDayChange();
+        }, 1000);
     </script>
 </body>
 </html>
