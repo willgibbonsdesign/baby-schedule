@@ -239,11 +239,11 @@
     
     <script>
         const schedule = [
-            { start: "9:00 AM", end: "10:25 AM", personA: "Baby Shift", personB: "Personal" },
-            { start: "10:25 AM", end: "12:25 PM", personA: "Baby Shift", personB: "Work Shift" },
-            { start: "12:25 PM", end: "2:25 PM", personA: "Work Shift", personB: "Baby Shift" },
-            { start: "2:25 PM", end: "4:25 PM", personA: "Baby Shift", personB: "Work Shift" },
-            { start: "4:25 PM", end: "6:25 PM", personA: "Work Shift", personB: "Baby Shift" },
+            { start: "9:00 AM", end: "10:25 AM", personA: "Personal", personB: "Baby Shift" },
+            { start: "10:25 AM", end: "12:25 PM", personA: "Work Shift", personB: "Baby Shift" },
+            { start: "12:25 PM", end: "2:25 PM", personA: "Baby Shift", personB: "Work Shift" },
+            { start: "2:25 PM", end: "4:25 PM", personA: "Work Shift", personB: "Baby Shift" },
+            { start: "4:25 PM", end: "6:25 PM", personA: "Baby Shift", personB: "Work Shift" },
             { start: "6:25 PM", end: "7:25 PM", personA: "Baby Shift", personB: "Personal" },
             { start: "7:25 PM", end: "8:25 PM", personA: "Home Shift", personB: "Baby Shift" },
             { start: "8:25 PM", end: "10:00 PM", personA: "Baby Shift", personB: "Home Shift" },
@@ -326,7 +326,20 @@
             document.getElementById('currentTime').textContent = timeStr;
             document.getElementById('currentDate').textContent = dateStr;
             
-            const currentMinutes = now.getHours() * 60 + now.getMinutes();
+            // Get current time in Denver timezone
+            const denverTimeString = now.toLocaleString('en-US', { 
+                timeZone: 'America/Denver',
+                hour12: false,
+                hour: '2-digit',
+                minute: '2-digit'
+            });
+            
+            console.log('Denver time string:', denverTimeString);
+            
+            const [hours, minutes] = denverTimeString.split(':').map(Number);
+            const currentMinutes = hours * 60 + minutes;
+            
+            console.log('Hours:', hours, 'Minutes:', minutes, 'Total minutes:', currentMinutes);
             
             let currentSlotIndex = -1;
             let progressInSlot = 0;
@@ -334,6 +347,8 @@
             for (let i = 0; i < schedule.length; i++) {
                 let startMinutes = timeToMinutes(schedule[i].start);
                 let endMinutes = timeToMinutes(schedule[i].end);
+                
+                console.log(`Slot ${i}: ${schedule[i].start} - ${schedule[i].end} (${startMinutes} - ${endMinutes})`);
                 
                 if (endMinutes < startMinutes) {
                     if (currentMinutes >= startMinutes || currentMinutes < endMinutes) {
@@ -343,12 +358,14 @@
                         } else {
                             progressInSlot = ((1440 - startMinutes) + currentMinutes) / ((1440 - startMinutes) + endMinutes);
                         }
+                        console.log('MATCHED slot', i, 'Progress:', progressInSlot);
                         break;
                     }
                 } else {
                     if (currentMinutes >= startMinutes && currentMinutes < endMinutes) {
                         currentSlotIndex = i;
                         progressInSlot = (currentMinutes - startMinutes) / (endMinutes - startMinutes);
+                        console.log('MATCHED slot', i, 'Progress:', progressInSlot);
                         break;
                     }
                 }
