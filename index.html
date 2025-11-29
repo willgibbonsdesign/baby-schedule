@@ -327,19 +327,16 @@
             document.getElementById('currentDate').textContent = dateStr;
             
             // Get current time in Denver timezone
-            const denverTimeString = now.toLocaleString('en-US', { 
+            const denverFormatter = new Intl.DateTimeFormat('en-US', {
                 timeZone: 'America/Denver',
-                hour12: false,
                 hour: '2-digit',
-                minute: '2-digit'
+                minute: '2-digit',
+                hour12: false
             });
-            
-            console.log('Denver time string:', denverTimeString);
-            
-            const [hours, minutes] = denverTimeString.split(':').map(Number);
+            const denverParts = denverFormatter.formatToParts(now);
+            const hours = parseInt(denverParts.find(p => p.type === 'hour').value);
+            const minutes = parseInt(denverParts.find(p => p.type === 'minute').value);
             const currentMinutes = hours * 60 + minutes;
-            
-            console.log('Hours:', hours, 'Minutes:', minutes, 'Total minutes:', currentMinutes);
             
             let currentSlotIndex = -1;
             let progressInSlot = 0;
@@ -347,8 +344,6 @@
             for (let i = 0; i < schedule.length; i++) {
                 let startMinutes = timeToMinutes(schedule[i].start);
                 let endMinutes = timeToMinutes(schedule[i].end);
-                
-                console.log(`Slot ${i}: ${schedule[i].start} - ${schedule[i].end} (${startMinutes} - ${endMinutes})`);
                 
                 if (endMinutes < startMinutes) {
                     if (currentMinutes >= startMinutes || currentMinutes < endMinutes) {
@@ -358,14 +353,12 @@
                         } else {
                             progressInSlot = ((1440 - startMinutes) + currentMinutes) / ((1440 - startMinutes) + endMinutes);
                         }
-                        console.log('MATCHED slot', i, 'Progress:', progressInSlot);
                         break;
                     }
                 } else {
                     if (currentMinutes >= startMinutes && currentMinutes < endMinutes) {
                         currentSlotIndex = i;
                         progressInSlot = (currentMinutes - startMinutes) / (endMinutes - startMinutes);
-                        console.log('MATCHED slot', i, 'Progress:', progressInSlot);
                         break;
                     }
                 }
@@ -380,10 +373,14 @@
                 }
             });
             
-            if (currentSlotIndex >= 0) {
+            if (currentSlotIndex >= 0 && rows[currentSlotIndex]) {
+                const scheduleContainer = document.querySelector('.schedule-container');
                 const currentRow = rows[currentSlotIndex];
-                const rowTop = currentRow.offsetTop;
-                const rowHeight = currentRow.offsetHeight;
+                const containerRect = scheduleContainer.getBoundingClientRect();
+                const rowRect = currentRow.getBoundingClientRect();
+                
+                const rowTop = rowRect.top - containerRect.top;
+                const rowHeight = rowRect.height;
                 const indicatorTop = rowTop + (rowHeight * progressInSlot);
                 
                 const indicator = document.getElementById('timeIndicator');
