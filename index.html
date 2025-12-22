@@ -82,6 +82,9 @@
         .work { background: #A9D08E; }
         .home { background: #F4B084; }
         .personal { background: #E7E6E6; }
+        .gym { background: #D4C5F9; }
+        .park { background: #B8E6B8; }
+        .winddown { background: #E7E6E6; }
         
         .current-row {
             box-shadow: 0 0 0 3px #FF6B6B inset;
@@ -102,6 +105,7 @@
             z-index: 100;
             box-shadow: 0 0 8px rgba(255, 107, 107, 0.6);
             transition: top 0.3s ease;
+            display: none;
         }
         
         .time-indicator::before {
@@ -216,11 +220,23 @@
                 </div>
                 <div class="legend-item">
                     <div class="legend-color home"></div>
-                    <span>Home Shift - Meals, chores, cleanup</span>
+                    <span>Home Shift - Dinner prep and meals</span>
                 </div>
                 <div class="legend-item">
                     <div class="legend-color personal"></div>
-                    <span>Personal - Shower, dog walks, etc.</span>
+                    <span>Personal - Personal time</span>
+                </div>
+                <div class="legend-item">
+                    <div class="legend-color winddown"></div>
+                    <span>Wind Down - Cleanup, dog walk, shower</span>
+                </div>
+                <div class="legend-item">
+                    <div class="legend-color gym"></div>
+                    <span>Gym - Exercise/workout</span>
+                </div>
+                <div class="legend-item">
+                    <div class="legend-color park"></div>
+                    <span>Park - Family time at park</span>
                 </div>
             </div>
         </div>
@@ -228,32 +244,25 @@
         <div class="notes">
             <div class="notes-title">NOTES</div>
             <ul>
-                <li>Someone is ALWAYS on baby duty</li>
-                <li>Person finishing 2nd night shift (4am-9am) gets immediate recovery time</li>
-                <li>Names automatically swap each day (even days: Julie=A, odd days: Will=A)</li>
-                <li>Dog walks happen during Personal time slots (9-10am & 6-7pm)</li>
+                <li>Overnight shifts swap each day (even days: Julie sleeps first, odd days: Will sleeps first)</li>
+                <li>Mon/Wed/Fri: Julie goes to Gym, Tue/Thu/Sat: Will goes to Gym, Sun: Park together</li>
+                <li>Dog walks happen during Wind Down (7-9pm)</li>
                 <li>Red line shows current time</li>
             </ul>
         </div>
     </div>
     
     <script>
-        const schedule = [
-            { start: "9:00 AM", end: "10:25 AM", personA: "Baby Shift", personB: "Personal" },
-            { start: "10:25 AM", end: "12:25 PM", personA: "Work Shift", personB: "Baby Shift" },
-            { start: "12:25 PM", end: "2:25 PM", personA: "Baby Shift", personB: "Work Shift" },
-            { start: "2:25 PM", end: "4:25 PM", personA: "Work Shift", personB: "Baby Shift" },
-            { start: "4:25 PM", end: "6:25 PM", personA: "Baby Shift", personB: "Work Shift" },
-            { start: "6:25 PM", end: "7:25 PM", personA: "Personal", personB: "Baby Shift" },
-            { start: "7:25 PM", end: "8:25 PM", personA: "Baby Shift", personB: "Home Shift" },
-            { start: "8:25 PM", end: "10:00 PM", personA: "Home Shift", personB: "Baby Shift" },
-            { start: "10:00 PM", end: "4:00 AM", personA: "SLEEP", personB: "Baby Shift" },
-            { start: "4:00 AM", end: "9:00 AM", personA: "Baby Shift", personB: "SLEEP" }
-        ];
-        
         function timeToMinutes(timeStr) {
             const [time, period] = timeStr.split(' ');
-            let [hours, minutes] = time.split(':').map(Number);
+            let hours, minutes;
+            
+            if (time.includes(':')) {
+                [hours, minutes] = time.split(':').map(Number);
+            } else {
+                hours = parseInt(time);
+                minutes = 0;
+            }
             
             if (period === 'PM' && hours !== 12) hours += 12;
             if (period === 'AM' && hours === 12) hours = 0;
@@ -267,32 +276,81 @@
             if (shift === 'Work Shift') return 'work';
             if (shift === 'Home Shift') return 'home';
             if (shift === 'Personal') return 'personal';
+            if (shift === 'Gym') return 'gym';
+            if (shift === 'Park') return 'park';
+            if (shift === 'Wind Down') return 'winddown';
             return '';
         }
         
         function getNames() {
+            // Names are now fixed - Julie is always Person A, Will is always Person B
+            return { personA: 'Julie', personB: 'Will' };
+        }
+        
+        function getMorningShift() {
+            // Determine 9-11am shift based on day of week
+            const now = new Date();
+            const denverDate = new Date(now.toLocaleString('en-US', { timeZone: 'America/Denver' }));
+            const dayOfWeek = denverDate.getDay(); // 0=Sunday, 1=Monday, etc.
+            
+            if (dayOfWeek === 0) {
+                // Sunday: Both go to Park
+                return { personA: "Park", personB: "Park" };
+            } else if (dayOfWeek === 1 || dayOfWeek === 3 || dayOfWeek === 5) {
+                // Mon/Wed/Fri: Julie goes to Gym
+                return { personA: "Gym", personB: "Baby Shift" };
+            } else {
+                // Tue/Thu/Sat: Will goes to Gym
+                return { personA: "Baby Shift", personB: "Gym" };
+            }
+        }
+        
+        function getOvernightShifts() {
+            // Determine which person gets first sleep shift based on even/odd day
             const now = new Date();
             const denverDate = new Date(now.toLocaleString('en-US', { timeZone: 'America/Denver' }));
             const dayOfMonth = denverDate.getDate();
             const isEvenDay = dayOfMonth % 2 === 0;
             
             if (isEvenDay) {
-                return { personA: 'Julie', personB: 'Will' };
+                // Even days: Julie sleeps 9pm-3am, Will sleeps 3am-9am
+                return {
+                    slot1: { personA: "SLEEP", personB: "Baby Shift" },
+                    slot2: { personA: "Baby Shift", personB: "SLEEP" }
+                };
             } else {
-                return { personA: 'Will', personB: 'Julie' };
+                // Odd days: Will sleeps 9pm-3am, Julie sleeps 3am-9am
+                return {
+                    slot1: { personA: "Baby Shift", personB: "SLEEP" },
+                    slot2: { personA: "SLEEP", personB: "Baby Shift" }
+                };
             }
         }
         
         function buildSchedule() {
             const names = getNames();
+            const morningShift = getMorningShift();
+            const overnightShifts = getOvernightShifts();
             const tbody = document.getElementById('scheduleBody');
             tbody.innerHTML = ''; // Clear existing rows
             
-            // Update headers
+            // Update headers (now fixed)
             document.getElementById('personAHeader').textContent = names.personA;
             document.getElementById('personBHeader').textContent = names.personB;
             
-            schedule.forEach((slot, index) => {
+            // Build schedule with dynamic morning and overnight shifts
+            const scheduleData = [
+                { start: "9 AM", end: "11 AM", personA: morningShift.personA, personB: morningShift.personB },
+                { start: "11 AM", end: "2 PM", personA: "Baby Shift", personB: "Work Shift" },
+                { start: "2 PM", end: "3 PM", personA: "Personal", personB: "Baby Shift" },
+                { start: "3 PM", end: "5 PM", personA: "Baby Shift", personB: "Work Shift" },
+                { start: "5 PM", end: "7 PM", personA: "Home Shift", personB: "Home Shift" },
+                { start: "7 PM", end: "9 PM", personA: "Wind Down", personB: "Wind Down" },
+                { start: "9 PM", end: "3 AM", personA: overnightShifts.slot1.personA, personB: overnightShifts.slot1.personB },
+                { start: "3 AM", end: "9 AM", personA: overnightShifts.slot2.personA, personB: overnightShifts.slot2.personB }
+            ];
+            
+            scheduleData.forEach((slot, index) => {
                 const row = document.createElement('tr');
                 row.dataset.index = index;
                 row.innerHTML = `
@@ -302,6 +360,8 @@
                 `;
                 tbody.appendChild(row);
             });
+            
+            return scheduleData;
         }
         
         function updateTime() {
@@ -338,12 +398,26 @@
             const minutes = parseInt(denverParts.find(p => p.type === 'minute').value);
             const currentMinutes = hours * 60 + minutes;
             
+            // Get the current schedule with dynamic morning and overnight shifts
+            const morningShift = getMorningShift();
+            const overnightShifts = getOvernightShifts();
+            const currentSchedule = [
+                { start: "9 AM", end: "11 AM", personA: morningShift.personA, personB: morningShift.personB },
+                { start: "11 AM", end: "2 PM", personA: "Baby Shift", personB: "Work Shift" },
+                { start: "2 PM", end: "3 PM", personA: "Personal", personB: "Baby Shift" },
+                { start: "3 PM", end: "5 PM", personA: "Baby Shift", personB: "Work Shift" },
+                { start: "5 PM", end: "7 PM", personA: "Home Shift", personB: "Home Shift" },
+                { start: "7 PM", end: "9 PM", personA: "Wind Down", personB: "Wind Down" },
+                { start: "9 PM", end: "3 AM", personA: overnightShifts.slot1.personA, personB: overnightShifts.slot1.personB },
+                { start: "3 AM", end: "9 AM", personA: overnightShifts.slot2.personA, personB: overnightShifts.slot2.personB }
+            ];
+            
             let currentSlotIndex = -1;
             let progressInSlot = 0;
             
-            for (let i = 0; i < schedule.length; i++) {
-                let startMinutes = timeToMinutes(schedule[i].start);
-                let endMinutes = timeToMinutes(schedule[i].end);
+            for (let i = 0; i < currentSchedule.length; i++) {
+                let startMinutes = timeToMinutes(currentSchedule[i].start);
+                let endMinutes = timeToMinutes(currentSchedule[i].end);
                 
                 if (endMinutes < startMinutes) {
                     if (currentMinutes >= startMinutes || currentMinutes < endMinutes) {
